@@ -1,25 +1,25 @@
 import os
-import FreeCAD
+import FreeCAD as App
 import FreeCADGui as Gui
 
-from freecad.workbench_starterkit import my_numpy_function
+from freecad.hexastorm import my_numpy_function
 
 class BaseCommand(object):
     NAME = ""
-    GEAR_FUNCTION = None
+    FUNCTION = None
     ICONDIR = os.path.join(os.path.dirname(__file__), "resources")
 
     def IsActive(self):
-        if FreeCAD.ActiveDocument is None:
+        if App.ActiveDocument is None:
             return False
         else:
             return True
 
     def Activated(self):
-        Gui.doCommandGui("import freecad.workbench_starterkit.commands")
-        Gui.doCommandGui("freecad.workbench_starterkit.commands.{}(2)".format(
+        Gui.doCommandGui("import freecad.hexastorm.commands")
+        Gui.doCommandGui("freecad.hexastorm.commands.{}.create(2)".format(
             self.__class__.__name__))
-        FreeCAD.ActiveDocument.recompute()
+        App.ActiveDocument.recompute()
         Gui.SendMsgToActiveView("ViewFit")
     
     def GetResources(self):
@@ -27,9 +27,15 @@ class BaseCommand(object):
                 'MenuText': self.MenuText,
                 'ToolTip': self.ToolTip}
 
+    @classmethod
+    def create(cls, arg):
+        val = cls.FUNCTION(arg)
+        App.Console.PrintMessage(f"run a numpy function: sqrt({arg}) = {val}\n")
+
+
 class Sqrt(BaseCommand):
     NAME = "squareroot"
-    GEAR_FUNCTION = my_numpy_function
+    FUNCTION = my_numpy_function.my_foo
     Pixmap = os.path.join(BaseCommand.ICONDIR, 'template_resource.svg')
     MenuText = 'Square root'
-    ToolTip = 'Compute a square root'
+    ToolTip = 'Computes a square root'
