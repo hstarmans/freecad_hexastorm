@@ -1,7 +1,11 @@
 import os
+
 import FreeCADGui as Gui
 import FreeCAD as App
+
 from freecad.hexastorm import ICONPATH
+from freecad.hexastorm import my_numpy_function
+from .commands import Sqrt
 
 
 class HexastormWorkbench(Gui.Workbench):
@@ -22,11 +26,10 @@ class HexastormWorkbench(Gui.Workbench):
         This function is called at the first activation of the workbench.
         here is the place to import all the commands
         """
-        from .commands import Sqrt
-        
-        from freecad.hexastorm import my_numpy_function
+
         App.Console.PrintMessage("switching to workbench_starterkit\n")
-        App.Console.PrintMessage("run a numpy function: sqrt(100) = {}\n".format(my_numpy_function.my_foo(100)))
+        App.Console.PrintMessage("run a numpy function: sqrt(100)"
+                                 + f"= {my_numpy_function.my_foo(100)}\n")
 
         self.appendToolbar("Tools", self.commands)
         self.appendMenu("Tools", self.commands)

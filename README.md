@@ -6,7 +6,8 @@ This workbench only works with the design described [here](https://github.com/hs
 ## Requirements
 
 - [FreeCAD](https://freecadweb.org/) with python3 support
-- [pyoptools](https://github.com/cihologramas/pyoptools)
+- [pyOpTools](https://github.com/cihologramas/pyoptools)
+- [prisms](https://github.com/hstarmans/opticaldesign)
 
 ## Linux Installation
 
@@ -35,3 +36,8 @@ Plots the following five rays for the optical system.
 ### Remove rays
 
 This removes all rays.
+
+## Related work
+This is based upon  
+-- [pyOpTools](https://github.com/cihologramas/freecad-pyoptools/)
+-- [workbench_starterkit](https://github.com/FreeCAD/freecad.workbench_starterkit)
