@@ -5,7 +5,6 @@ import FreeCADGui as Gui
 import Part
 from pyoptools.misc.pmisc.misc import wavelength2RGB
 
-# from freecad.hexastorm import my_numpy_function
 from prisms import system
 
 
@@ -38,18 +37,6 @@ class BaseCommand(object):
         cls.FUNCTION(cls)
 
 
-# class Sqrt(BaseCommand):
-#     NAME = "squareroot"
-#     Pixmap = os.path.join(BaseCommand.ICONDIR,
-#                           'template_resource.svg')
-#     MenuText = 'Square root'
-#     ToolTip = 'Computes a square root'
-
-#     def create(self):
-#         val = my_numpy_function.my_foo(2)
-#         App.Console.PrintMessage(f"Root of 2 equals {val}")
-
-
 def get_prop_shape(ray):
     ''' translate object from pyoptools ray to FreeCAD shape '''
     P1 = App.Base.Vector(tuple(ray.pos))
@@ -76,7 +63,6 @@ class DrawRay(BaseCommand):
     ToolTip = 'Draws rays'
 
     def __init__(self) -> None:
-        #super().__init__(self)
         self.PP = system.PrismScanner()
 
     def update_positions(self):
@@ -86,21 +72,22 @@ class DrawRay(BaseCommand):
            The two code bases do not share common shapes,
            which should be developed but is out of scope
         '''
-        App.Console.PrintMessage("Starting to update position\n")
+        def grabcenter(name):
+            return list(App.ActiveDocument
+                           .getObject(name)
+                           .Shape.Solids[0]
+                           .CenterOfMass)
+
+        # laser origin
+        pos_laser = grabcenter('lasertube001')
+        self.PP.ray_prop['pos'] = pos_laser
+
         # for prism, mirror and diode
         # center of mass is well defined
-        pos_prism = list(App.ActiveDocument
-                            .getObject('prism001')
-                            .Shape.Solids[0]
-                            .CenterOfMass)
-        App.Console.PrintMessage(f"Sending {pos_prism}")
+        pos_prism = grabcenter('prism001')
         self.PP.set_orientation('prism', position=pos_prism)
 
-        pos_mirror = list(App.ActiveDocument
-                             .getObject('mirror001')
-                             .Shape.Solids[0]
-                             .CenterOfMass)
-        App.Console.PrintMessage(f"Sending {pos_mirror}")
+        pos_mirror = grabcenter('mirror001')
         self.PP.set_orientation('mirror', position=pos_mirror)
 
         # not implemented
@@ -125,10 +112,8 @@ class DrawRay(BaseCommand):
             thickness = (PP.S[PP.naming[lensname]][0]
                            .thickness)
             assert boundbox.XMin < 0
-            pos = [boundbox.XMin+thickness/2,
-                   (boundbox.YMin-boundbox.YMax)*0.5,
-                   (boundbox.ZMax-boundbox.ZMin)*0.5]
-            App.Console.PrintMessage(f"Sending {pos}")
+            pos = list(boundbox.Center)
+            pos[0] += thickness*0.5
             self.PP.set_orientation(lensname,
                                     position=pos)
 
@@ -144,9 +129,9 @@ class DrawRay(BaseCommand):
                           .BoundBox)
         posCLlens(boundboxCL2, 'CL2')
 
-        App.Console.PrintMessage("Saving position")
-
-        self.PP.save_system('/home/starmans/projects/opticaldesign/Notebooks/temp.pkl')
+        # For debugging, system can be saved and opened with pyoptools
+        # self.PP.save_system('/home/starmans/projects/
+        #                      opticaldesign/Notebooks/temp.pkl')
 
     def FUNCTION(self):
         doc = App.activeDocument()
@@ -160,9 +145,6 @@ class DrawRay(BaseCommand):
                                      + " execution stopped")
             return
 
-        # this is the object upon which you should define your system
-        # App.ActiveDocument.getObject('prism001').Shape.Solids[0].Placement
-
         # creating a group simplifies removal of rays
         grp = doc.addObject("App::DocumentObjectGroup",
                             "Rays")
@@ -171,16 +153,15 @@ class DrawRay(BaseCommand):
         # Create a dictionary to group rays by wavelength
         raydict = {}
 
-        App.Console.PrintMessage(f"Detected {len(self.PP.S.prop_ray)} rays")
         for ray in self.PP.S.prop_ray:
-            #lines = Part.Wire(get_prop_shape(ray))
             llines = get_prop_shape(ray)
             wl = ray.wavelength
             raydict[wl] = llines+raydict.get(wl, [])
 
         for idx, wl in enumerate(raydict.keys()):
             lines = Part.makeCompound(raydict[wl])
-            myObj = App.ActiveDocument.addObject("Part::FeaturePython", f"Ray{idx}")
+            myObj = App.ActiveDocument.addObject("Part::FeaturePython",
+                                                 f"Ray{idx}")
             myObj.Shape = lines
             r, g, b = wavelength2RGB(wl)
             myObj.ViewObject.LineColor = (r, g, b, 0.)
