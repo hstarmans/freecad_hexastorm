@@ -5,7 +5,7 @@ import FreeCAD as App
 
 from freecad.hexastorm import ICONPATH
 from freecad.hexastorm import my_numpy_function
-from .commands import Sqrt
+from .commands import DrawRay
 
 
 class HexastormWorkbench(Gui.Workbench):
@@ -16,7 +16,7 @@ class HexastormWorkbench(Gui.Workbench):
     MenuText = "Hexastorm workbench"
     ToolTip = "Adds optical properties to prism scanner design"
     Icon = os.path.join(ICONPATH, "template_resource.svg")
-    commands = ['Sqrt']
+    commands = ['DrawRay']
 
     def GetClassName(self):
         return "Gui::PythonWorkbench"
@@ -28,12 +28,12 @@ class HexastormWorkbench(Gui.Workbench):
         """
 
         App.Console.PrintMessage("switching to workbench_starterkit\n")
-        App.Console.PrintMessage("run a numpy function: sqrt(100)"
-                                 + f"= {my_numpy_function.my_foo(100)}\n")
+        # App.Console.PrintMessage("run a numpy function: sqrt(100)"
+        #                          + f"= {my_numpy_function.my_foo(100)}\n")
 
         self.appendToolbar("Tools", self.commands)
         self.appendMenu("Tools", self.commands)
-        Gui.addCommand('Sqrt', Sqrt())
+        Gui.addCommand('DrawRay', DrawRay())
 
     def Activated(self):
         '''
