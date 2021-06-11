@@ -58,6 +58,7 @@ def get_prop_shape(ray):
     else:
         P2 = App.Base.Vector(tuple(ray.pos + 10. * ray.dir))
 
+    App.Console.PrintMessage(f"P1 {P1} P2 {P2}")
     if ray.intensity != 0:
         L1 = [Part.makeLine(P1, P2)]
         for i in ray.childs:
@@ -92,12 +93,14 @@ class DrawRay(BaseCommand):
                             .getObject('prism001')
                             .Shape.Solids[0]
                             .CenterOfMass)
+        App.Console.PrintMessage(f"Sending {pos_prism}")
         self.PP.set_orientation('prism', position=pos_prism)
 
         pos_mirror = list(App.ActiveDocument
                              .getObject('mirror001')
                              .Shape.Solids[0]
                              .CenterOfMass)
+        App.Console.PrintMessage(f"Sending {pos_mirror}")
         self.PP.set_orientation('mirror', position=pos_mirror)
 
         # not implemented
@@ -123,8 +126,9 @@ class DrawRay(BaseCommand):
                            .thickness)
             assert boundbox.XMin < 0
             pos = [boundbox.XMin+thickness/2,
-                   (boundbox.YMax-boundbox.YMin)*0.5,
+                   (boundbox.YMin-boundbox.YMax)*0.5,
                    (boundbox.ZMax-boundbox.ZMin)*0.5]
+            App.Console.PrintMessage(f"Sending {pos}")
             self.PP.set_orientation(lensname,
                                     position=pos)
 
@@ -141,7 +145,8 @@ class DrawRay(BaseCommand):
         posCLlens(boundboxCL2, 'CL2')
 
         App.Console.PrintMessage("Saving position")
-        # self.PP.save_system('temp.pkl')
+
+        self.PP.save_system('/home/starmans/projects/opticaldesign/Notebooks/temp.pkl')
 
     def FUNCTION(self):
         doc = App.activeDocument()
@@ -166,15 +171,16 @@ class DrawRay(BaseCommand):
         # Create a dictionary to group rays by wavelength
         raydict = {}
 
+        App.Console.PrintMessage(f"Detected {len(self.PP.S.prop_ray)} rays")
         for ray in self.PP.S.prop_ray:
             #lines = Part.Wire(get_prop_shape(ray))
             llines = get_prop_shape(ray)
             wl = ray.wavelength
             raydict[wl] = llines+raydict.get(wl, [])
 
-        for wl in raydict.keys():
+        for idx, wl in enumerate(raydict.keys()):
             lines = Part.makeCompound(raydict[wl])
-            myObj = App.ActiveDocument.addObject("Part::FeaturePython", "Ray")
+            myObj = App.ActiveDocument.addObject("Part::FeaturePython", f"Ray{idx}")
             myObj.Shape = lines
             r, g, b = wavelength2RGB(wl)
             myObj.ViewObject.LineColor = (r, g, b, 0.)
