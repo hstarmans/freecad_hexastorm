@@ -26,16 +26,24 @@ For instance, it looks for an object called prism and tries to determine its cen
 Hereafter, it constructs an analogous model in Pyoptools.
 The following commands are supported.  
 
-### Five rays
+### Key rays
 
 Plots the following five rays for the optical system.
-- the two most extreme rays which hit the optical mirror
-- the two rays which form the edges of a laser scanline
-- the central ray through the optical system
+- rays which hit edges optical mirror
+- rays which form the edges of a laser scanline
+- central ray through the optical system
+- ray which hit edges photodiode
 
 ### Remove rays
 
 This removes all rays.
+
+## TODO
+
+- add check of correct laser height and front mirror
+- remove reflection photodiode
+- scanline seems to long
+- add focal point and visualize
 
 ## Related work
 This is based upon  

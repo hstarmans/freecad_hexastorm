@@ -1,11 +1,13 @@
 import os
+from os.path import dirname
+from pathlib import Path
 
 import FreeCAD as App
 import FreeCADGui as Gui
 import Part
 from pyoptools.misc.pmisc.misc import wavelength2RGB
 
-from prisms import system
+import prisms
 
 
 class BaseCommand(object):
@@ -45,7 +47,6 @@ def get_prop_shape(ray):
     else:
         P2 = App.Base.Vector(tuple(ray.pos + 10. * ray.dir))
 
-    App.Console.PrintMessage(f"P1 {P1} P2 {P2}")
     if ray.intensity != 0:
         L1 = [Part.makeLine(P1, P2)]
         for i in ray.childs:
@@ -63,7 +64,7 @@ class DrawRay(BaseCommand):
     ToolTip = 'Draws rays'
 
     def __init__(self) -> None:
-        self.PP = system.PrismScanner()
+        self.PP = prisms.system.PrismScanner()
 
     def update_positions(self):
         '''retrieves position optical components
@@ -90,10 +91,15 @@ class DrawRay(BaseCommand):
         pos_mirror = grabcenter('mirror001')
         self.PP.set_orientation('mirror', position=pos_mirror)
 
-        # not implemented
-        # pos_diode = (App.ActiveDocument
-        #                 .getObjectsByLabel('photodiode')[0]
-        #                 .Shape.CenterOfMass)
+        pos_diode = (App.ActiveDocument
+                        .getObjectsByLabel('photodiode')[0]
+                        .Shape.CenterOfMass)
+        # transformation matrix needs to be applied
+        pos_diode = list(App.ActiveDocument
+                            .getObject('photodiode_cape')
+                            .Placement
+                            .Matrix*pos_diode)
+        self.PP.set_orientation('diode', position=pos_diode)
 
         # cylinder lenses are compound objects
         # and do not have center of
@@ -130,15 +136,20 @@ class DrawRay(BaseCommand):
         posCLlens(boundboxCL2, 'CL2')
 
         # For debugging, system can be saved and opened with pyoptools
-        # self.PP.save_system('/home/starmans/projects/
-        #                      opticaldesign/Notebooks/temp.pkl')
+        fname = Path(dirname(dirname(dirname(prisms.__file__))),
+                     'Notebooks',
+                     'temp.pkl')
+        self.PP.save_system(fname)
 
     def FUNCTION(self):
         doc = App.activeDocument()
 
+        # TODO: the object is never initialized
+        #       that's why functions are called
+        #       with self which is strange / wrong
         self.__init__(self)
         self.update_positions(self)
-        self.PP.draw_five_rays()
+        self.PP.draw_key_rays()
 
         if doc is None:
             App.Console.PrintMessage("No active document found,"
