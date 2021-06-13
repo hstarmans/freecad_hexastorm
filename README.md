@@ -28,21 +28,16 @@ The following commands are supported.
 
 ### Key rays
 
-Plots the following five rays for the optical system.
-- rays which hit edges optical mirror
+Plots the following rays for the optical system.
 - rays which form the edges of a laser scanline
 - central ray through the optical system
 - ray which hit edges photodiode
 
-### Remove rays
-
-This removes all rays.
+Rays can removed by simply removing the object created.
 
 ## TODO
 
-- add check of correct laser height and front mirror
-- remove reflection photodiode
-- scanline seems to long
+- add check of correct laser height, first cylinder lens with respect to prism
 - add focal point and visualize
 
 ## Related work

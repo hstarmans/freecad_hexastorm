@@ -89,6 +89,12 @@ class DrawRay(BaseCommand):
         self.PP.set_orientation('prism', position=pos_prism)
 
         pos_mirror = grabcenter('mirror001')
+        # in pyoptools reflective side is at 0 not center
+        # of mass, so it requires correction, it assumed
+        # thickness is 2
+        cor = pow(2, 0.5)
+        pos_mirror[2] = pos_mirror[2] - cor
+        pos_mirror[1] = pos_mirror[1] - cor
         self.PP.set_orientation('mirror', position=pos_mirror)
 
         pos_diode = (App.ActiveDocument
