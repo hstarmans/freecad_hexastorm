@@ -37,8 +37,7 @@ Rays can removed by simply removing the object created.
 
 ## TODO
 
-- add check of correct laser height, first cylinder lens with respect to prism
-- add focal point and visualize
+- visualize focal point of laser
 
 ## Related work
 This is based upon  

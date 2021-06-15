@@ -1,6 +1,7 @@
 import os
 from os.path import dirname
 from pathlib import Path
+from numpy.testing import assert_array_almost_equal
 
 import FreeCAD as App
 import FreeCADGui as Gui
@@ -40,7 +41,7 @@ class BaseCommand(object):
 
 
 def get_prop_shape(ray):
-    ''' translate object from pyoptools ray to FreeCAD shape '''
+    '''translate object from pyoptools ray to FreeCAD shape '''
     P1 = App.Base.Vector(tuple(ray.pos))
     if len(ray.childs) > 0:
         P2 = App.Base.Vector(tuple(ray.childs[0].pos))
@@ -54,6 +55,26 @@ def get_prop_shape(ray):
     else:
         L1 = []
     return L1
+
+
+def alignment_test(a, b, decimal=1, msg=None):
+    '''verifies to arrays are equal within range
+       prints result to Freecad output
+
+    a       -- array 1
+    b       -- array 2
+    decimal -- desired accuracy
+    msg     -- string which clarifies what is tested
+    '''
+    try:
+        assert_array_almost_equal(a, b, decimal=decimal)
+    except AssertionError as e:
+        if msg:
+            msg += ' not aligned.\n'
+        App.Console.PrintMessage(msg+str(e)+'\n')
+        return
+    msg += f' are aligned within {decimal} decimal.\n'
+    App.Console.PrintMessage(msg)
 
 
 class DrawRay(BaseCommand):
@@ -73,6 +94,8 @@ class DrawRay(BaseCommand):
            The two code bases do not share common shapes,
            which should be developed but is out of scope
         '''
+        PP = self.PP
+
         def grabcenter(name):
             return list(App.ActiveDocument
                            .getObject(name)
@@ -81,12 +104,17 @@ class DrawRay(BaseCommand):
 
         # laser origin
         pos_laser = grabcenter('lasertube001')
-        self.PP.ray_prop['pos'] = pos_laser
+        PP.ray_prop['pos'] = pos_laser
 
         # for prism, mirror and diode
         # center of mass is well defined
         pos_prism = grabcenter('prism001')
-        self.PP.set_orientation('prism', position=pos_prism)
+        PP.set_orientation('prism', position=pos_prism)
+
+        # CHECK center laser at center prism
+        alignment_test(pos_laser[1:],
+                       pos_prism[1:],
+                       msg="Laser and prism")
 
         pos_mirror = grabcenter('mirror001')
         # in pyoptools reflective side is at 0 not center
@@ -95,7 +123,7 @@ class DrawRay(BaseCommand):
         cor = pow(2, 0.5)
         pos_mirror[2] = pos_mirror[2] - cor
         pos_mirror[1] = pos_mirror[1] - cor
-        self.PP.set_orientation('mirror', position=pos_mirror)
+        PP.set_orientation('mirror', position=pos_mirror)
 
         pos_diode = (App.ActiveDocument
                         .getObjectsByLabel('photodiode')[0]
@@ -105,7 +133,7 @@ class DrawRay(BaseCommand):
                             .getObject('photodiode_cape')
                             .Placement
                             .Matrix*pos_diode)
-        self.PP.set_orientation('diode', position=pos_diode)
+        PP.set_orientation('diode', position=pos_diode)
 
         # cylinder lenses are compound objects
         # and do not have center of
@@ -120,26 +148,43 @@ class DrawRay(BaseCommand):
         def posCLlens(boundbox, lensname):
             '''translate boundbox position
                to position in pyoptools'''
-            PP = self.PP
+ 
             thickness = (PP.S[PP.naming[lensname]][0]
                            .thickness)
             assert boundbox.XMin < 0
             pos = list(boundbox.Center)
             pos[0] += thickness*0.5
-            self.PP.set_orientation(lensname,
-                                    position=pos)
+            PP.set_orientation(lensname,
+                               position=pos)
+            return pos
 
         boundboxCL1 = (App.ActiveDocument
                           .getObject('CLens1001')
                           .Shape
                           .BoundBox)
-        posCLlens(boundboxCL1, 'CL1')
+        posCL1lens = posCLlens(boundboxCL1, 'CL1')
 
+        # CHECK Y-position first cylinder lens
+        alignment_test(posCL1lens[1],
+                       pos_prism[1],
+                       msg="First cylinder lens and prism")
+
+        # CHECK Z-position first cylinder lens
         boundboxCL2 = (App.ActiveDocument
                           .getObject('CLens2001')
                           .Shape
                           .BoundBox)
-        posCLlens(boundboxCL2, 'CL2')
+        posCL2lens = posCLlens(boundboxCL2, 'CL2')
+        alignment_test(posCL2lens[2],
+                       pos_prism[2],
+                       msg="Second cylinder lens and prism")
+
+        # Check alignment cylinder lenses
+        dist = PP.focal_point(cyllens1=True) - PP.focal_point(cyllens1=False)
+        msg = 'Distance focal point CL1 minus CL2'
+        alignment_test(dist,
+                       0,
+                       msg=msg)
 
         # For debugging, system can be saved and opened with pyoptools
         fname = Path(dirname(dirname(dirname(prisms.__file__))),
