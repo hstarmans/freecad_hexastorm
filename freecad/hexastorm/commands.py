@@ -2,6 +2,7 @@ import os
 from os.path import dirname
 from pathlib import Path
 from numpy.testing import assert_array_almost_equal
+from copy import deepcopy
 
 import FreeCAD as App
 import FreeCADGui as Gui
@@ -219,6 +220,20 @@ class DrawRay(BaseCommand):
             llines = get_prop_shape(ray)
             wl = ray.wavelength
             raydict[wl] = llines+raydict.get(wl, [])
+
+        # draw focal point
+        edge = self.PP.focal_point(cyllens1=False,
+                                   simple=False)
+        high_edge = deepcopy(edge)
+        low_edge = deepcopy(edge)
+        high_edge[1] = edge[1]-2
+        low_edge[1] = edge[1]+2
+
+        P1 = App.Base.Vector(tuple(low_edge))
+        P2 = App.Base.Vector(tuple(high_edge))
+        llines = [Part.makeLine(P1, P2)]
+        # we draw in red
+        raydict[0.800] = llines+raydict.get(wl, [])
 
         for idx, wl in enumerate(raydict.keys()):
             lines = Part.makeCompound(raydict[wl])

@@ -34,10 +34,8 @@ Plots the following rays for the optical system.
 - ray which hit edges photodiode
 
 Rays can be removed by simply deleting the object created.
-
-## TODO
-
-- visualize focal point of laser
+The functions prints out if all components are correctly positioned
+and the location of the focal point.
 
 ## Related work
 This is based upon  
