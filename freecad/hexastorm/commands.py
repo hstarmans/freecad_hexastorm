@@ -104,7 +104,7 @@ class DrawRay(BaseCommand):
                            .CenterOfMass)
 
         # laser origin
-        pos_laser = grabcenter('lasertube001')
+        pos_laser = grabcenter('lenstube001')
         PP.ray_prop['pos'] = pos_laser
 
         # for prism, mirror and diode
@@ -122,8 +122,8 @@ class DrawRay(BaseCommand):
         # of mass, so it requires correction, it assumed
         # thickness is 2
         cor = pow(2, 0.5)
-        pos_mirror[2] = pos_mirror[2] - cor
-        pos_mirror[1] = pos_mirror[1] - cor
+        pos_mirror[2] = pos_mirror[2] + cor
+        pos_mirror[1] = pos_mirror[1] + cor
         PP.set_orientation('mirror', position=pos_mirror)
 
         pos_diode = (App.ActiveDocument
@@ -152,7 +152,7 @@ class DrawRay(BaseCommand):
  
             thickness = (PP.S[PP.naming[lensname]][0]
                            .thickness)
-            assert boundbox.XMin < 0
+            # assert boundbox.XMin < 0
             pos = list(boundbox.Center)
             pos[0] += thickness*0.5
             PP.set_orientation(lensname,
