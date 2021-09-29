@@ -3,6 +3,15 @@
 Workbench to add optics ray tracing capabilities to FreeCAD for a prism scanner.
 This workbench only works with the design described [here](https://github.com/hstarmans/hexastorm_design)
 
+
+## Video
+An instruction video is avaible https://youtu.be/kekMkjqzRjE  
+In it, the design is combined with the following repo's  
+Hexastorm Design  
+https://github.com/hstarmans/hexastorm_design  
+Python library with prism simulation  
+https://github.com/hstarmans/opticaldesign  
+
 ## Requirements
 
 - [FreeCAD](https://freecadweb.org/) with python3 support
