@@ -21,8 +21,14 @@ https://github.com/hstarmans/opticaldesign
 ## Linux Installation
 
 Clone the git into the Mod dir in your FreeCAD root directory, that usually means cloning into ~/.FreeCAD/Mod
-directory.
+directory or ~/.local/share/FreeCAD/Mod if you are using an AppImage.
+The path can be found in Preferences --> General --> Macro --> Macro Path
 After that you just select the "Hexastorm" workbench in FreeCAD in the usual way. 
+After march 2022, I moved to a compact version of the laser scanner.
+Ensure you check out the correct version.
+I also load in the correct modules by adding them to path in commands.py.
+This is very hacky.
+
 
 
 ## Small Instructions
