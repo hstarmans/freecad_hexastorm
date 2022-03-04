@@ -95,9 +95,16 @@ class DrawRay(BaseCommand):
     ToolTip = 'Draws rays'
 
     def __init__(self) -> None:
-        self.PP = prisms.system.PrismScanner(compact=True)
+        
         # appending paths
         print("adding pyoptools and prisms to path")
+        self.focal_length = 65
+        self.diode_angle = 42.5
+        print(f"Assuming focal length {self.focal_length}")
+        print(f"Assuming trigger angle {self.diode_angle}")
+        self.PP = prisms.system.PrismScanner(compact=True, 
+                                             focal_length=self.focal_length)
+
         import sys
         sys.path.append("/home/hexastorm/projects/opticaldesign/src/")
         sys.path.append("/home/hexastorm/.local/lib/python3.8/site-packages/")
@@ -272,16 +279,17 @@ class DrawRay(BaseCommand):
         drawedge(edge)
         
         # Draw ideal position photodiode
-        self.PP = prisms.system.PrismScanner(compact=True, reflection=True)
+        self.PP = prisms.system.PrismScanner(compact=True, 
+                                             reflection=True,
+                                             focal_length=self.focal_length)
         self.update_positions(self, compact=True)
-        angle = 33
-        print(f"Assuming angle is {angle:.2f} degrees.")
+
         edge = self.PP.focal_point(cyllens1=True,
-                                   angle=33,
+                                   angle=self.diode_angle,
                                    simple=False,
                                    diode=True,
                                    plot=False)
-        drawedge(edge, axis=1, color=0.801)
+        drawedge(edge, axis=0, color=0.801)
 
         # Draw key rays for ideal diode position
         self.PP.draw_key_rays(scanline=False, diode=True)
