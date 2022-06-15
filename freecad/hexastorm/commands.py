@@ -85,7 +85,7 @@ def alignment_test(a, b, decimal=1, msg=None):
             msg += ' not aligned.\n'
         App.Console.PrintMessage(msg+str(e)+'\n')
         return False
-    
+
 
 class DrawRay(BaseCommand):
     NAME = "draw ray"
@@ -95,14 +95,14 @@ class DrawRay(BaseCommand):
     ToolTip = 'Draws rays'
 
     def __init__(self) -> None:
-        
+
         # appending paths
         print("adding pyoptools and prisms to path")
-        self.focal_length = 65
-        self.diode_angle = 42.5
+        self.focal_length = 55
+        self.diode_angle = -38
         print(f"Assuming focal length {self.focal_length}")
         print(f"Assuming trigger angle {self.diode_angle}")
-        self.PP = prisms.system.PrismScanner(compact=True, 
+        self.PP = prisms.system.PrismScanner(compact=True,
                                              focal_length=self.focal_length)
 
         import sys
@@ -129,10 +129,10 @@ class DrawRay(BaseCommand):
                            .Shape.Solids[0]
                            .CenterOfMass)
 
-        # laser origin
+        # cylinder lens position
         pos_laser = grabcenter('lenstube001')
         pos_ray = deepcopy(pos_laser)
-        pos_ray[1]-=10
+        pos_ray[1] -= 10
         print(f"position of ray becomes {pos_ray}")
         PP.ray_prop['pos'] = pos_ray
         PP.set_orientation('lens', position=pos_laser)
@@ -146,30 +146,27 @@ class DrawRay(BaseCommand):
         # CHECK center laser at center prism
         if not alignment_test([pos_laser[i] for i in [0,2]],
                               [pos_prism[i] for i in [0,2]],
-                              msg="Laser and prism"):
+                              msg="Apsherical lens and prism"):
             return False
-        if not compact:
-            pos_mirror = grabcenter('mirror001')
-            # in pyoptools reflective side is at 0 not center
-            # of mass, so it requires correction, it assumed
-            # thickness is 2
-            cor = pow(2, 0.5)
-            pos_mirror[2] = pos_mirror[2] + cor
-            pos_mirror[1] = pos_mirror[1] + cor
-            PP.set_orientation('mirror', position=pos_mirror)
 
-        if not compact:
-            pos_diode = (App.ActiveDocument
-                            .getObjectsByLabel('photodiode')[0]
-                            .Shape.CenterOfMass)
-            # transformation matrix needs to be applied
-            pos_diode = list(App.ActiveDocument
-                                .getObject('photodiode_cape')
-                                .Placement
-                                .Matrix*pos_diode)
-            PP.set_orientation('diode', position=pos_diode)
-        else:
-            print("Position photodiode is not accounted for")
+        pos_mirror = grabcenter('mirror001')
+        # in pyoptools reflective side is at 0 not center
+        # of mass, so it requires correction, it assumed
+        # thickness is 2
+        cor = pow(2, 0.5)
+        pos_mirror[2] = pos_mirror[2] + cor
+        pos_mirror[1] = pos_mirror[1] - cor
+        PP.set_orientation('mirror', position=pos_mirror)
+
+        pos_diode = (App.ActiveDocument
+                        .getObjectsByLabel('photodiode')[0]
+                        .Shape.CenterOfMass)
+        # transformation matrix needs to be applied
+        pos_diode = list(App.ActiveDocument
+                            .getObject('sideplate001')
+                            .Placement
+                            .Matrix*pos_diode)
+        PP.set_orientation('diode', position=pos_diode)
 
         # cylinder lenses are compound objects
         # and do not have center of
@@ -203,26 +200,26 @@ class DrawRay(BaseCommand):
 
             # CHECK Y-position first cylinder lens
             alignment_test(posCL1lens[1],
-                        pos_prism[1],
-                        msg="First cylinder lens and prism")
+                           pos_prism[1],
+                           msg="First cylinder lens and prism")
 
             # CHECK Z-position first cylinder lens
             boundboxCL2 = (App.ActiveDocument
-                            .getObject('CLens2001')
-                            .Shape
-                            .BoundBox)
+                              .getObject('CLens2001')
+                              .Shape
+                              .BoundBox)
             posCL2lens = posCLlens(boundboxCL2, 'CL2')
             alignment_test(posCL2lens[2],
-                        pos_prism[2],
-                        msg="Second cylinder lens and prism")
+                           pos_prism[2],
+                           msg="Second cylinder lens and prism")
 
             # Check alignment cylinder lenses
             dist = PP.focal_point(cyllens1=True) - PP.focal_point(cyllens1=False)
             msg = 'Distance focal point CL1 minus CL2'
             alignment_test(dist,
-                        0,
-                        msg=msg)
-                
+                           0,
+                           msg=msg)
+
         # For debugging, system can be saved and opened with pyoptools
         fname = Path(dirname(dirname(dirname(prisms.__file__))),
                      'Notebooks',
@@ -261,7 +258,7 @@ class DrawRay(BaseCommand):
             llines = get_prop_shape(ray)
             wl = ray.wavelength
             raydict[wl] = llines+raydict.get(wl, [])
-        
+
         # Draw focal point
         edge = self.PP.focal_point(cyllens1=False,
                                    simple=False)
@@ -277,10 +274,10 @@ class DrawRay(BaseCommand):
             # we draw in red
             raydict[color] = llines+raydict.get(wl, [])
         drawedge(edge)
-        
+
         # Draw ideal position photodiode
-        self.PP = prisms.system.PrismScanner(compact=True, 
-                                             reflection=True,
+        self.PP = prisms.system.PrismScanner(compact=True,
+                                             reflection=False,
                                              focal_length=self.focal_length)
         self.update_positions(self, compact=True)
 
@@ -289,7 +286,7 @@ class DrawRay(BaseCommand):
                                    simple=False,
                                    diode=True,
                                    plot=False)
-        drawedge(edge, axis=0, color=0.801)
+        drawedge(edge, axis=1, color=0.801)
 
         # Draw key rays for ideal diode position
         self.PP.draw_key_rays(scanline=False, diode=True)
@@ -297,8 +294,6 @@ class DrawRay(BaseCommand):
             llines = get_prop_shape(ray)
             wl = ray.wavelength
             raydict[wl] = llines+raydict.get(wl, [])
-
-
 
         for idx, wl in enumerate(raydict.keys()):
             lines = Part.makeCompound(raydict[wl])
