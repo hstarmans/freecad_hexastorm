@@ -1,9 +1,11 @@
 import os
 from os.path import dirname
 from pathlib import Path
-from numpy.testing import assert_array_almost_equal
 from copy import deepcopy
+from statistics import mean
 
+
+from numpy.testing import assert_array_almost_equal
 import FreeCAD as App
 import FreeCADGui as Gui
 import Part
@@ -67,7 +69,7 @@ def get_prop_shape(ray):
 
 
 def alignment_test(a, b, decimal=1, msg=None):
-    '''verifies to arrays are equal within range
+    '''verifies arrays a and b are equal within range
        prints result to Freecad output
 
     a       -- array 1
@@ -84,6 +86,7 @@ def alignment_test(a, b, decimal=1, msg=None):
         if msg:
             msg += ' not aligned.\n'
         App.Console.PrintMessage(msg+str(e)+'\n')
+        App.Console.PrintMessage(f"A:{a}  B:{b}\n")
         return False
 
 
@@ -96,20 +99,22 @@ class DrawRay(BaseCommand):
 
     def __init__(self) -> None:
 
+  
+
+        # TODO: automatically determine diode trigger angle
+        self.diode_angle = -38
+        print(f"Assuming trigger angle {self.diode_angle}")
+        self.withcylinder = True
+        
+        self.PP = prisms.system.PrismScanner(withcylinder=self.withcylinder)
+
         # appending paths
         print("adding pyoptools and prisms to path")
-        self.focal_length = 55
-        self.diode_angle = -38
-        print(f"Assuming focal length {self.focal_length}")
-        print(f"Assuming trigger angle {self.diode_angle}")
-        self.PP = prisms.system.PrismScanner(compact=True,
-                                             focal_length=self.focal_length)
-
         import sys
         sys.path.append("/home/hexastorm/projects/opticaldesign/src/")
         sys.path.append("/home/hexastorm/.local/lib/python3.8/site-packages/")
 
-    def update_positions(self, compact=False):
+    def update_positions(self):
         '''retrieves position optical components
            from Freecad document and pushes these
            to the settings in the optical system
@@ -117,9 +122,6 @@ class DrawRay(BaseCommand):
            which should be developed but is out of scope
 
            return False if not aligned and True otherwise
-
-           compact -- the compact system does not have
-                      a photodiode and two cylinder lenses
         '''
         PP = self.PP
 
@@ -129,13 +131,18 @@ class DrawRay(BaseCommand):
                            .Shape.Solids[0]
                            .CenterOfMass)
 
-        # cylinder lens position
-        pos_laser = grabcenter('lenstube001')
-        pos_ray = deepcopy(pos_laser)
+        # position aspherical lens
+        pos_aspheric = grabcenter('lenstube001')
+        pos_ray = deepcopy(pos_aspheric)
+        # assumed ray propagates in -y
+        # move it back
         pos_ray[1] -= 10
         print(f"position of ray becomes {pos_ray}")
         PP.ray_prop['pos'] = pos_ray
-        PP.set_orientation('lens', position=pos_laser)
+
+        if not PP.withcylinder:
+            PP.set_orientation('lens', 
+                               position=pos_aspheric)
 
         # for prism, mirror and diode
         # center of mass is well defined
@@ -143,8 +150,8 @@ class DrawRay(BaseCommand):
         PP.set_orientation('prism', position=pos_prism)
 
         print("Modified orientation to compact")
-        # CHECK center laser at center prism
-        if not alignment_test([pos_laser[i] for i in [0,2]],
+        # CHECK center aspherical lens at center prism
+        if not alignment_test([pos_aspheric[i] for i in [0,2]],
                               [pos_prism[i] for i in [0,2]],
                               msg="Apsherical lens and prism"):
             return False
@@ -158,15 +165,18 @@ class DrawRay(BaseCommand):
         pos_mirror[1] = pos_mirror[1] - cor
         PP.set_orientation('mirror', position=pos_mirror)
 
-        pos_diode = (App.ActiveDocument
-                        .getObjectsByLabel('photodiode')[0]
-                        .Shape.CenterOfMass)
+        # TODO: this does not work
+        #       i don't know how to get the position of the photodiode
+        #       now search for it and fix the angle
+        # pos_diode = (App.ActiveDocument
+        #                .getObjectsByLabel('photodiode')[0]
+        #                .Shape.CenterOfMass)
         # transformation matrix needs to be applied
-        pos_diode = list(App.ActiveDocument
-                            .getObject('sideplate001')
-                            .Placement
-                            .Matrix*pos_diode)
-        PP.set_orientation('diode', position=pos_diode)
+        # pos_diode = list(App.ActiveDocument
+        #                    .getObject('sideplate001')
+        #                    .Placement
+        #                    .Matrix*pos_diode)
+        # PP.set_orientation('diode', position=pos_diode)
 
         # cylinder lenses are compound objects
         # and do not have center of
@@ -174,7 +184,7 @@ class DrawRay(BaseCommand):
         # on Boundbox objects you can get XMax, XMin, etc
 
         # the cylindrical lenses used have their curved part pointing
-        # to the laser source.
+        # to the laser source, which is assumed to point along the y-axis.
         # the flat part is well defined and should be at -thickness/2
         # from origin
 
@@ -186,24 +196,26 @@ class DrawRay(BaseCommand):
                            .thickness)
             # assert boundbox.XMin < 0
             pos = list(boundbox.Center)
-            pos[0] += thickness*0.5
+            pos[1] += thickness*0.5
             PP.set_orientation(lensname,
                                position=pos)
             return pos
 
-        if not compact:
+        if PP.withcylinder:
             boundboxCL1 = (App.ActiveDocument
                             .getObject('CLens1001')
                             .Shape
                             .BoundBox)
             posCL1lens = posCLlens(boundboxCL1, 'CL1')
 
-            # CHECK Y-position first cylinder lens
-            alignment_test(posCL1lens[1],
-                           pos_prism[1],
+            # CHECK X-position first cylinder lens
+            # as it focusses along this axis
+            alignment_test(posCL1lens[0],
+                           pos_prism[0],
                            msg="First cylinder lens and prism")
 
             # CHECK Z-position first cylinder lens
+            # as it focusses along this axis
             boundboxCL2 = (App.ActiveDocument
                               .getObject('CLens2001')
                               .Shape
@@ -235,7 +247,7 @@ class DrawRay(BaseCommand):
         #       with self which is strange / wrong
         self.__init__(self)
         print("Updating postion assuming compact mode")
-        if not self.update_positions(self, compact=True):
+        if not self.update_positions(self):
             print("Not drawing rays not aligned")
             return
 
@@ -276,13 +288,22 @@ class DrawRay(BaseCommand):
         drawedge(edge)
 
         # Draw ideal position photodiode
-        self.PP = prisms.system.PrismScanner(compact=True,
-                                             reflection=False,
-                                             focal_length=self.focal_length)
-        self.update_positions(self, compact=True)
+        # reinit
+        self.__init__(self)
+        self.update_positions(self)
 
+        #  hit angles diode
+        # hit_angles = self.PP.find_object('diode')
+
+        # if len(hit_angles) == 0:
+        #     App.Console.PrintMessage("Diode not hit at current position"
+        #                              + " execution stopped")
+        #     return
+        
+        diode_angle = -38
+        App.Console.PrintMessage(f"Diode assumed hit at angle {diode_angle:.2f}")
         edge = self.PP.focal_point(cyllens1=True,
-                                   angle=self.diode_angle,
+                                   angle=diode_angle,
                                    simple=False,
                                    diode=True,
                                    plot=False)
